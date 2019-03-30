@@ -46,12 +46,12 @@ fn get_nibble(number: u16, index: u8) -> u8 {
 
 pub struct Opcode(pub u16);
 impl Opcode {
-    pub fn get_reg1(&self) -> u8 {
-        get_nibble(self.0, 2)
+    pub fn get_reg1(&self) -> usize {
+        get_nibble(self.0, 2) as usize
     }
 
-    pub fn get_reg2(&self) -> u8 {
-        get_nibble(self.0, 1)
+    pub fn get_reg2(&self) -> usize {
+        get_nibble(self.0, 1) as usize
     }
 
     pub fn get_byte(&self) -> u8 {

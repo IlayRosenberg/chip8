@@ -1,6 +1,6 @@
 use std::io::prelude::*;
 use std::io::{self, SeekFrom};
-use byteorder::{BigEndian, ReadBytesExt};
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use rand::Rng;
 
 #[macro_use]
@@ -19,6 +19,7 @@ pub struct Cpu {
 impl Cpu {
     const PROGRAM_BASE: u16 = 0x200;
     const STACK_BASE: u16 = 0xefe;
+    const WORD_SIZE: u16 = std::mem::size_of::<u16>() as u16;
     pub fn new(rom: Vec<u8>) -> Cpu {
         let mut memory = vec![0; 0x1000];
         memory.splice(0x200 .. (0x200 + rom.len()), rom.iter().cloned());
@@ -35,8 +36,29 @@ impl Cpu {
 
     fn fetch_instruction(&mut self) -> Opcode {
         self.memory.seek(SeekFrom::Start(self.program_counter as u64)).unwrap();
-        self.program_counter += 2;
+        self.program_counter += Cpu::WORD_SIZE;
         Opcode(self.memory.read_u16::<BigEndian>().unwrap())
+    }
+
+    fn push(&mut self, value: u16) {
+        self.memory.seek(SeekFrom::Start(self.stack_pointer as u64)).unwrap();
+        self.memory.write_u16::<BigEndian>(value).unwrap();
+        self.stack_pointer -= Cpu::WORD_SIZE;
+    }
+
+    fn pop(&mut self) -> u16 {
+        self.memory.seek(SeekFrom::Start(self.stack_pointer as u64)).unwrap();
+        self.stack_pointer += Cpu::WORD_SIZE;
+        self.memory.read_u16::<BigEndian>().unwrap()
+    }
+
+    fn call(&mut self, addr: u16) {
+        self.push(self.program_counter);
+        self.program_counter = addr;
+    }
+
+    fn ret(&mut self) {
+        self.program_counter = self.pop();
     }
 
     pub fn execute(&mut self) {
@@ -45,21 +67,43 @@ impl Cpu {
         match opcode.to_nibble_tuple() {
             opcode!("JMP addr")         => { self.program_counter = opcode.get_tribble(); },
             opcode!("JMP V0, addr")     => { self.program_counter = opcode.get_tribble() + self.gpr[0] as u16; },
-            opcode!("MOV Vx, byte")     => { self.gpr[opcode.get_reg1() as usize] = opcode.get_byte(); },
-            opcode!("MOV Vx, Vy")       => { self.gpr[opcode.get_reg1() as usize] = self.gpr[opcode.get_reg2() as usize]; },
-            opcode!("ADD Vx, byte")     => { self.gpr[opcode.get_reg1() as usize] += opcode.get_byte(); },
-            opcode!("ADD Vx, Vy")       => { self.gpr[opcode.get_reg1() as usize] += self.gpr[opcode.get_reg2() as usize]; },
-            opcode!("ADD I, Vx")        => { self.index += self.gpr[opcode.get_reg1() as usize] as u16; },
+            opcode!("CALL addr")        => { self.call(opcode.get_tribble()); }
+            opcode!("RET")              => { self.ret(); }
+            opcode!("MOV Vx, byte")     => { self.gpr[opcode.get_reg1()] = opcode.get_byte(); },
+            opcode!("MOV Vx, Vy")       => { self.gpr[opcode.get_reg1()] = self.gpr[opcode.get_reg2()]; },
+            opcode!("ADD Vx, byte")     => { self.gpr[opcode.get_reg1()] += opcode.get_byte(); },
+            opcode!("ADD Vx, Vy")       => { self.gpr[opcode.get_reg1()] += self.gpr[opcode.get_reg2()]; },
+            opcode!("ADD I, Vx")        => { self.index += self.gpr[opcode.get_reg1()] as u16; },
             opcode!("MOV I, addr")      => { self.index = opcode.get_tribble(); },
-            opcode!("SUB Vx, Vy")       => { self.gpr[opcode.get_reg1() as usize] -= self.gpr[opcode.get_reg2() as usize]; },
-            opcode!("RSUB Vx, Vy")      => { self.gpr[opcode.get_reg1() as usize] = self.gpr[opcode.get_reg2() as usize] - self.gpr[opcode.get_reg1() as usize]; },
-            opcode!("OR Vx, Vy")        => { self.gpr[opcode.get_reg1() as usize] |= self.gpr[opcode.get_reg2() as usize]; },
-            opcode!("AND Vx, Vy")       => { self.gpr[opcode.get_reg1() as usize] &= self.gpr[opcode.get_reg2() as usize]; },
-            opcode!("XOR Vx, Vy")       => { self.gpr[opcode.get_reg1() as usize] ^= self.gpr[opcode.get_reg2() as usize]; },
+            opcode!("SUB Vx, Vy")       => { self.gpr[opcode.get_reg1()] -= self.gpr[opcode.get_reg2()]; },
+            opcode!("RSUB Vx, Vy")      => { self.gpr[opcode.get_reg1()] = self.gpr[opcode.get_reg2()] - self.gpr[opcode.get_reg1()]; },
+            opcode!("OR Vx, Vy")        => { self.gpr[opcode.get_reg1()] |= self.gpr[opcode.get_reg2()]; },
+            opcode!("AND Vx, Vy")       => { self.gpr[opcode.get_reg1()] &= self.gpr[opcode.get_reg2()]; },
+            opcode!("XOR Vx, Vy")       => { self.gpr[opcode.get_reg1()] ^= self.gpr[opcode.get_reg2()]; },
             // @TODO: update Vf
-            opcode!("SHR Vx")           => { self.gpr[opcode.get_reg1() as usize] >>= 1; },
-            opcode!("SHL Vx")           => { self.gpr[opcode.get_reg1() as usize] <<= 1; },
-            opcode!("RND Vx, tribble")  => { self.gpr[opcode.get_reg1() as usize] = self.rng.gen_range(0, opcode.get_byte() + 1); },
+            opcode!("SHR Vx")           => { self.gpr[opcode.get_reg1()] >>= 1; },
+            opcode!("SHL Vx")           => { self.gpr[opcode.get_reg1()] <<= 1; },
+            opcode!("RND Vx, tribble")  => { self.gpr[opcode.get_reg1()] = self.rng.gen_range(0, opcode.get_byte() + 1); },
+            opcode!("SKE Vx, byte")     => {
+                if self.gpr[opcode.get_reg1()] == opcode.get_byte() {
+                    self.program_counter += Cpu::WORD_SIZE;
+                }
+            },
+            opcode!("SKE Vx, Vy")       => {
+                if self.gpr[opcode.get_reg1()] == self.gpr[opcode.get_reg2()] {
+                    self.program_counter += Cpu::WORD_SIZE;
+                }
+            },
+            opcode!("SKNE Vx, byte")    => {
+                if self.gpr[opcode.get_reg1()] != opcode.get_byte() {
+                    self.program_counter += Cpu::WORD_SIZE;
+                }
+            },
+            opcode!("SKNE Vx, Vy")    => {
+                if self.gpr[opcode.get_reg1()] != self.gpr[opcode.get_reg2()] {
+                    self.program_counter += Cpu::WORD_SIZE;
+                }
+            },
             _                           => { println!("Unsupported opcode: 0x{:X}", opcode.0); std::process::exit(1); }
         }
     }
