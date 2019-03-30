@@ -37,7 +37,7 @@ macro_rules! opcode {
 }
 
 fn bit_slice(number: u16, offset: u8, size: u8) -> u16 {
-    (number >> offset) & 2u16.pow(size.into())
+    (number >> offset) & (2u16.pow(size.into()) - 1)
 }
 
 fn get_nibble(number: u16, index: u8) -> u8 {
