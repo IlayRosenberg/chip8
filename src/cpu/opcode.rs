@@ -32,7 +32,7 @@ macro_rules! opcode {
     ("ADD I, Vx")           =>    ((0xF, _, 0x1, 0xE));
     ("FONT Vx")             =>    ((0xF, _, 0x2, 0x9));
     ("BCD Vx")              =>    ((0xF, _, 0x3, 0x3));
-    ("STR [I], Vx")          =>    ((0xF, _, 0x5, 0x5));
+    ("STR [I], Vx")         =>    ((0xF, _, 0x5, 0x5));
     ("LD Vx, [I]")          =>    ((0xF, _, 0x6, 0x5));
 }
 

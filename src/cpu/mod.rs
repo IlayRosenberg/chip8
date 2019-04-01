@@ -136,12 +136,14 @@ impl Cpu {
             opcode!("RET")                  => { self.ret(); }
             opcode!("MOV Vx, byte")         => { self.gpr[opcode.reg1()] = opcode.byte(); },
             opcode!("MOV Vx, Vy")           => { self.gpr[opcode.reg1()] = self.gpr[opcode.reg2()]; },
-            opcode!("ADD Vx, byte")         => { self.gpr[opcode.reg1()] += opcode.byte(); },
-            opcode!("ADD Vx, Vy")           => { self.gpr[opcode.reg1()] += self.gpr[opcode.reg2()]; },
-            opcode!("ADD I, Vx")            => { self.index += self.gpr[opcode.reg1()] as u16; },
             opcode!("MOV I, addr")          => { self.index = opcode.tribble(); },
             opcode!("MOV DT, Vx")           => { self.delay_timer.set(self.gpr[opcode.reg1()] as u64); },
             opcode!("MOV Vx, DT")           => { self.gpr[opcode.reg1()] = self.delay_timer.get() as u8; },
+            opcode!("ADD Vx, byte")         => { self.gpr[opcode.reg1()].wrapping_add(opcode.byte()); },
+            opcode!("ADD Vx, Vy")           => { self.gpr[opcode.reg1()].wrapping_add(self.gpr[opcode.reg2()]); },
+            opcode!("ADD I, Vx")            => { self.index.wrapping_add(self.gpr[opcode.reg1()] as u16); },
+            opcode!("SUB Vx, Vy")           => { self.gpr[opcode.reg1()].wrapping_sub(self.gpr[opcode.reg2()]); },
+            opcode!("RSUB Vx, Vy")          => { self.gpr[opcode.reg1()] = self.gpr[opcode.reg2()].wrapping_sub(self.gpr[opcode.reg1()]); },
             opcode!("OR Vx, Vy")            => { self.gpr[opcode.reg1()] |= self.gpr[opcode.reg2()]; },
             opcode!("AND Vx, Vy")           => { self.gpr[opcode.reg1()] &= self.gpr[opcode.reg2()]; },
             opcode!("XOR Vx, Vy")           => { self.gpr[opcode.reg1()] ^= self.gpr[opcode.reg2()]; },
@@ -156,7 +158,7 @@ impl Cpu {
             opcode!("DRW Vx, Vy, nibble")   => { self.draw(self.gpr[opcode.reg1()], self.gpr[opcode.reg2()], opcode.nibble()); },
             opcode!("BCD Vx")               => { self.bcd(self.gpr[opcode.reg1()]); },
             opcode!("LD Vx, [I]")           => { self.load_regs(opcode.reg1()) },
-            opcode!("STR [I], Vx")           => { self.store_regs(opcode.reg1()) },
+            opcode!("STR [I], Vx")          => { self.store_regs(opcode.reg1()) },
             opcode!("FONT Vx")              => { self.index = (self.gpr[opcode.reg1()] * 5) as u16; }
             _                               => { println!("Unsupported opcode: 0x{:X} at 0x{:X}", opcode.0, self.program_counter - 2); std::process::exit(1); }
         }
