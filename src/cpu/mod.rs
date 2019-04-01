@@ -84,6 +84,12 @@ impl Cpu {
         }
     }
 
+    fn skip_if(&mut self, predicate: bool) {
+        if predicate {
+            self.program_counter += Cpu::WORD_SIZE;
+        }
+    }
+
     pub fn execute(&mut self) {
         let opcode = self.fetch_instruction();
 
@@ -107,26 +113,10 @@ impl Cpu {
             opcode!("SHR Vx")               => { self.gpr[opcode.reg1()] >>= 1; },
             opcode!("SHL Vx")               => { self.gpr[opcode.reg1()] <<= 1; },
             opcode!("RND Vx, tribble")      => { self.gpr[opcode.reg1()] = self.rng.gen_range(0, opcode.byte() + 1); },
-            opcode!("SKE Vx, byte")         => {
-                if self.gpr[opcode.reg1()] == opcode.byte() {
-                    self.program_counter += Cpu::WORD_SIZE;
-                }
-            },
-            opcode!("SKE Vx, Vy")           => {
-                if self.gpr[opcode.reg1()] == self.gpr[opcode.reg2()] {
-                    self.program_counter += Cpu::WORD_SIZE;
-                }
-            },
-            opcode!("SKNE Vx, byte")        => {
-                if self.gpr[opcode.reg1()] != opcode.byte() {
-                    self.program_counter += Cpu::WORD_SIZE;
-                }
-            },
-            opcode!("SKNE Vx, Vy")          => {
-                if self.gpr[opcode.reg1()] != self.gpr[opcode.reg2()] {
-                    self.program_counter += Cpu::WORD_SIZE;
-                }
-            },
+            opcode!("SKE Vx, byte")         => { self.skip_if(self.gpr[opcode.reg1()] == opcode.byte()) },
+            opcode!("SKE Vx, Vy")           => { self.skip_if(self.gpr[opcode.reg1()] == self.gpr[opcode.reg2()]) },
+            opcode!("SKNE Vx, byte")        => { self.skip_if(self.gpr[opcode.reg1()] != opcode.byte()) },
+            opcode!("SKNE Vx, Vy")          => { self.skip_if(self.gpr[opcode.reg1()] != self.gpr[opcode.reg2()]) },
             opcode!("DRW Vx, Vy, nibble")   => { self.draw(self.gpr[opcode.reg1()], self.gpr[opcode.reg2()], opcode.nibble()); }
             _                           => { println!("Unsupported opcode: 0x{:X}", opcode.0); std::process::exit(1); }
         }
