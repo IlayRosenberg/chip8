@@ -10,6 +10,8 @@ use opcode::Opcode;
 mod sprite;
 use sprite::Sprite;
 
+mod timer;
+
 pub struct Cpu {
     gpr: [u8; 16],
     program_counter: u16,
@@ -17,7 +19,8 @@ pub struct Cpu {
     stack_pointer: u16,
     memory: io::Cursor<Vec<u8>>,
     display: [bool; 64 * 32],
-    rng: rand::rngs::ThreadRng
+    rng: rand::rngs::ThreadRng,
+    delay_timer: timer::Timer
 }
 
 impl Cpu {
@@ -51,7 +54,8 @@ impl Cpu {
             stack_pointer: Cpu::STACK_BASE,
             memory: io::Cursor::new(memory),
             display: [false; 64 * 32],
-            rng: rand::thread_rng()
+            rng: rand::thread_rng(),
+            delay_timer: timer::Timer::new()
         }
     }
 
@@ -136,8 +140,8 @@ impl Cpu {
             opcode!("ADD Vx, Vy")           => { self.gpr[opcode.reg1()] += self.gpr[opcode.reg2()]; },
             opcode!("ADD I, Vx")            => { self.index += self.gpr[opcode.reg1()] as u16; },
             opcode!("MOV I, addr")          => { self.index = opcode.tribble(); },
-            opcode!("SUB Vx, Vy")           => { self.gpr[opcode.reg1()] -= self.gpr[opcode.reg2()]; },
-            opcode!("RSUB Vx, Vy")          => { self.gpr[opcode.reg1()] = self.gpr[opcode.reg2()] - self.gpr[opcode.reg1()]; },
+            opcode!("MOV DT, Vx")           => { self.delay_timer.set(self.gpr[opcode.reg1()] as u64); },
+            opcode!("MOV Vx, DT")           => { self.gpr[opcode.reg1()] = self.delay_timer.get() as u8; },
             opcode!("OR Vx, Vy")            => { self.gpr[opcode.reg1()] |= self.gpr[opcode.reg2()]; },
             opcode!("AND Vx, Vy")           => { self.gpr[opcode.reg1()] &= self.gpr[opcode.reg2()]; },
             opcode!("XOR Vx, Vy")           => { self.gpr[opcode.reg1()] ^= self.gpr[opcode.reg2()]; },
