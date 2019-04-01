@@ -26,7 +26,23 @@ impl Cpu {
     const WORD_SIZE: u16 = std::mem::size_of::<u16>() as u16;
     pub fn new(rom: Vec<u8>) -> Cpu {
         let mut memory = vec![0; 0x1000];
-        memory.splice(0x200 .. (0x200 + rom.len()), rom.iter().cloned());
+        memory.splice(..(5*16), [0xf0, 0x90, 0x90, 0x90, 0xf0,
+                                 0x20, 0x60, 0x20, 0x20, 0x70,
+                                 0xf0, 0x10, 0xf0, 0x80, 0xf0,
+                                 0xf0, 0x10, 0xf0, 0x10, 0xf0,
+                                 0x90, 0x90, 0xf0, 0x10, 0x10,
+                                 0xf0, 0x80, 0xf0, 0x10, 0xf0,
+                                 0xf0, 0x80, 0xf0, 0x90, 0xf0,
+                                 0xf0, 0x10, 0x20, 0x40, 0x40,
+                                 0xf0, 0x90, 0xf0, 0x90, 0xf0,
+                                 0xf0, 0x90, 0xf0, 0x10, 0xf0,
+                                 0xf0, 0x90, 0xf0, 0x90, 0x90,
+                                 0xe0, 0x90, 0xe0, 0x90, 0xe0,
+                                 0xf0, 0x80, 0x80, 0x80, 0xf0,
+                                 0xe0, 0x90, 0x90, 0x90, 0xe0,
+                                 0xf0, 0x80, 0xf0, 0x80, 0xf0,
+                                 0xf0, 0x80, 0xf0, 0x80, 0x80].iter().cloned());
+        memory.splice(0x200 .. (0x200 + rom.len()), rom);
 
         Cpu {
             gpr: [0; 16],
@@ -137,7 +153,8 @@ impl Cpu {
             opcode!("BCD Vx")               => { self.bcd(self.gpr[opcode.reg1()]); },
             opcode!("LD Vx, [I]")           => { self.load_regs(opcode.reg1()) },
             opcode!("ST [I], Vx")           => { self.store_regs(opcode.reg1()) },
-            _                               => { println!("Unsupported opcode: 0x{:X}", opcode.0); std::process::exit(1); }
+            opcode!("FONT Vx")              => { self.index = (self.gpr[opcode.reg1()] * 5) as u16; }
+            _                               => { println!("Unsupported opcode: 0x{:X} at 0x{:X}", opcode.0, self.program_counter - 2); std::process::exit(1); }
         }
     }
 }
