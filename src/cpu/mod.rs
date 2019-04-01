@@ -152,7 +152,7 @@ impl Cpu {
             opcode!("DRW Vx, Vy, nibble")   => { self.draw(self.gpr[opcode.reg1()], self.gpr[opcode.reg2()], opcode.nibble()); },
             opcode!("BCD Vx")               => { self.bcd(self.gpr[opcode.reg1()]); },
             opcode!("LD Vx, [I]")           => { self.load_regs(opcode.reg1()) },
-            opcode!("ST [I], Vx")           => { self.store_regs(opcode.reg1()) },
+            opcode!("STR [I], Vx")           => { self.store_regs(opcode.reg1()) },
             opcode!("FONT Vx")              => { self.index = (self.gpr[opcode.reg1()] * 5) as u16; }
             _                               => { println!("Unsupported opcode: 0x{:X} at 0x{:X}", opcode.0, self.program_counter - 2); std::process::exit(1); }
         }
