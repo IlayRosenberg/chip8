@@ -90,6 +90,11 @@ impl Cpu {
         }
     }
 
+    fn bcd(&mut self, number: u8) {
+        self.memory.seek(SeekFrom::Start(self.index as u64)).unwrap();
+        let bcd = [((number / 100) % 10) as u8, ((number / 10) % 10) as u8, (number % 10) as u8];
+        self.memory.write_all(&bcd).unwrap();
+    }
     pub fn execute(&mut self) {
         let opcode = self.fetch_instruction();
 
@@ -117,8 +122,8 @@ impl Cpu {
             opcode!("SKE Vx, Vy")           => { self.skip_if(self.gpr[opcode.reg1()] == self.gpr[opcode.reg2()]) },
             opcode!("SKNE Vx, byte")        => { self.skip_if(self.gpr[opcode.reg1()] != opcode.byte()) },
             opcode!("SKNE Vx, Vy")          => { self.skip_if(self.gpr[opcode.reg1()] != self.gpr[opcode.reg2()]) },
-            opcode!("DRW Vx, Vy, nibble")   => { self.draw(self.gpr[opcode.reg1()], self.gpr[opcode.reg2()], opcode.nibble()); }
-            _                           => { println!("Unsupported opcode: 0x{:X}", opcode.0); std::process::exit(1); }
+            opcode!("DRW Vx, Vy, nibble")   => { self.draw(self.gpr[opcode.reg1()], self.gpr[opcode.reg2()], opcode.nibble()); },
+            opcode!("BCD Vx")               => { self.bcd(self.gpr[opcode.reg1()]); },
         }
     }
 }
