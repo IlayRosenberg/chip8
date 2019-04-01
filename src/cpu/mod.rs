@@ -46,9 +46,9 @@ impl Cpu {
     }
 
     fn push(&mut self, value: u16) {
+        self.stack_pointer -= Cpu::WORD_SIZE;
         self.memory.seek(SeekFrom::Start(self.stack_pointer as u64)).unwrap();
         self.memory.write_u16::<BigEndian>(value).unwrap();
-        self.stack_pointer -= Cpu::WORD_SIZE;
     }
 
     fn pop(&mut self) -> u16 {
