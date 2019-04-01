@@ -1,6 +1,6 @@
 use bitvec::{BitVec, Bits};
 
-// @TODO: refactor the whole Sprite struct, it is hedious
+// @TODO: refactor the whole Sprite struct, it is hideous
 
 pub struct Sprite(Vec<BitVec>);
 
