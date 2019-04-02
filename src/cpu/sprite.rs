@@ -1,4 +1,4 @@
-use bitvec::{BitVec, Bits};
+use bitvec::{BigEndian, BitVec, Bits};
 
 // @TODO: refactor the whole Sprite struct, it is hideous
 
@@ -8,8 +8,7 @@ impl Sprite {
     pub fn new(sprite_data: &Vec<u8>) -> Sprite {
         Sprite(
             sprite_data.iter()
-                       .map(|byte| (0..8).rev()
-                                         .map(move |bit_index| byte.get::<bitvec::BigEndian>(bit_index.into()))
+                       .map(|byte| (0..8).map(move |bit_index| byte.get::<BigEndian>(bit_index.into()))
                                          .collect())
                        .collect()
         )
@@ -19,7 +18,7 @@ impl Sprite {
         let mut mask = [false; 64 * 32];
         for line in y..y+self.0.len() {
             for column in x..x+8 {
-                mask[line * 32 + column % 64] = self.0[line - y][column - x];
+                mask[line * 64 + column % 64] = self.0[line - y][column - x];
             }
         }
         
