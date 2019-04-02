@@ -2,6 +2,7 @@ use std::io::prelude::*;
 use std::io::{self, SeekFrom};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use rand::Rng;
+use bitvec::Bits;
 
 #[macro_use]
 mod opcode;
@@ -147,9 +148,13 @@ impl Cpu {
             opcode!("OR Vx, Vy")            => { self.gpr[opcode.reg1()] |= self.gpr[opcode.reg2()]; },
             opcode!("AND Vx, Vy")           => { self.gpr[opcode.reg1()] &= self.gpr[opcode.reg2()]; },
             opcode!("XOR Vx, Vy")           => { self.gpr[opcode.reg1()] ^= self.gpr[opcode.reg2()]; },
-            // @TODO: update Vf
-            opcode!("SHR Vx")               => { self.gpr[opcode.reg1()] >>= 1; },
-            opcode!("SHL Vx")               => { self.gpr[opcode.reg1()] <<= 1; },
+            opcode!("SHR Vx")               => { 
+                self.gpr[opcode.reg1()].get::<bitvec::BigEndian>(0.into());
+                self.gpr[opcode.reg1()] >>= 1;
+                },
+            opcode!("SHL Vx")               => {
+                self.gpr[opcode.reg1()].get::<bitvec::BigEndian>(7.into());
+                self.gpr[opcode.reg1()] <<= 1; },
             opcode!("RND Vx, tribble")      => { self.gpr[opcode.reg1()] = self.rng.gen_range(0, opcode.byte() + 1); },
             opcode!("SKE Vx, byte")         => { self.skip_if(self.gpr[opcode.reg1()] == opcode.byte()) },
             opcode!("SKE Vx, Vy")           => { self.skip_if(self.gpr[opcode.reg1()] == self.gpr[opcode.reg2()]) },
