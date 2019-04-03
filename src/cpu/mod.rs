@@ -18,7 +18,7 @@ pub struct Cpu {
     program_counter: u16,
     index: u16,
     stack_pointer: u16,
-    memory: io::Cursor<Vec<u8>>,
+    memory: Vec<u8>,
     display: [bool; 64 * 32],
     rng: rand::rngs::ThreadRng,
     delay_timer: timer::Timer
@@ -53,7 +53,7 @@ impl Cpu {
             program_counter: Cpu::PROGRAM_BASE,
             index: 0,
             stack_pointer: Cpu::STACK_BASE,
-            memory: io::Cursor::new(memory),
+            memory: memory,
             display: [false; 64 * 32],
             rng: rand::thread_rng(),
             delay_timer: timer::Timer::new()
@@ -61,21 +61,19 @@ impl Cpu {
     }
 
     fn fetch_instruction(&mut self) -> Opcode {
-        self.memory.seek(SeekFrom::Start(self.program_counter as u64)).unwrap();
+        let instruction = Opcode((&self.memory[(self.program_counter as usize)..]).read_u16::<BigEndian>().unwrap());
         self.program_counter += Cpu::WORD_SIZE;
-        Opcode(self.memory.read_u16::<BigEndian>().unwrap())
+        instruction
     }
 
     fn push(&mut self, value: u16) {
         self.stack_pointer -= Cpu::WORD_SIZE;
-        self.memory.seek(SeekFrom::Start(self.stack_pointer as u64)).unwrap();
-        self.memory.write_u16::<BigEndian>(value).unwrap();
+        (&mut self.memory[(self.stack_pointer as usize)..]).write_u16::<BigEndian>(value).unwrap();
     }
 
     fn pop(&mut self) -> u16 {
-        self.memory.seek(SeekFrom::Start(self.stack_pointer as u64)).unwrap();
         self.stack_pointer += Cpu::WORD_SIZE;
-        self.memory.read_u16::<BigEndian>().unwrap()
+        (&self.memory[(self.stack_pointer as usize)..]).read_u16::<BigEndian>().unwrap()
     }
 
     fn call(&mut self, addr: u16) {
@@ -91,8 +89,7 @@ impl Cpu {
         assert!(z <= 15, "Sprite size is {} when the maximum allowed sprite size is 15", z);
 
         let mut sprite_data = vec![0u8; z as usize];
-        self.memory.seek(SeekFrom::Start(self.index as u64)).unwrap();
-        self.memory.read_exact(sprite_data.as_mut_slice()).unwrap();
+        (&self.memory[(self.index as usize)..]).read_exact(sprite_data.as_mut_slice()).unwrap();
 
         let sprite = Sprite::new(&sprite_data);
         let screen_mask = sprite.get_screen_mask(x as usize, y as usize);
@@ -112,19 +109,16 @@ impl Cpu {
     }
 
     fn bcd(&mut self, number: u8) {
-        self.memory.seek(SeekFrom::Start(self.index as u64)).unwrap();
         let bcd = [((number / 100) % 10) as u8, ((number / 10) % 10) as u8, (number % 10) as u8];
-        self.memory.write_all(&bcd).unwrap();
+        (&mut self.memory[(self.index as usize)..]).write_all(&bcd).unwrap();
     }
 
     fn load_regs(&mut self, reg_count: usize) {
-        self.memory.seek(SeekFrom::Start(self.index as u64)).unwrap();
-        self.memory.read_exact(&mut self.gpr[0 .. reg_count+1]).unwrap();
+        (&self.memory[(self.index as usize)..]).read_exact(&mut self.gpr[0 .. reg_count+1]).unwrap();
     }
 
     fn store_regs(&mut self, reg_count: usize) {
-        self.memory.seek(SeekFrom::Start(self.index as u64)).unwrap();
-        self.memory.write_all(&self.gpr[0 .. reg_count+1]).unwrap();
+        (&mut self.memory[(self.index as usize)..]).write_all(&self.gpr[0 .. reg_count+1]).unwrap();
     }
 
     pub fn execute(&mut self) {
