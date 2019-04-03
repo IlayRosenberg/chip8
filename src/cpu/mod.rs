@@ -1,12 +1,11 @@
-use std::io::prelude::*;
-use std::io::{self, SeekFrom};
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use rand::Rng;
 use bitvec::Bits;
 
 #[macro_use]
 mod opcode;
 use opcode::Opcode;
+
+mod memory;
 
 mod sprite;
 use sprite::Sprite;
@@ -18,7 +17,7 @@ pub struct Cpu {
     program_counter: u16,
     index: u16,
     stack_pointer: u16,
-    memory: Vec<u8>,
+    memory: memory::Memory,
     display: [bool; 64 * 32],
     rng: rand::rngs::ThreadRng,
     delay_timer: timer::Timer
@@ -29,31 +28,12 @@ impl Cpu {
     const STACK_BASE: u16 = 0xefe;
     const WORD_SIZE: u16 = std::mem::size_of::<u16>() as u16;
     pub fn new(rom: Vec<u8>) -> Cpu {
-        let mut memory = vec![0; 0x1000];
-        memory.splice(..(5*16), [0xf0, 0x90, 0x90, 0x90, 0xf0,
-                                 0x20, 0x60, 0x20, 0x20, 0x70,
-                                 0xf0, 0x10, 0xf0, 0x80, 0xf0,
-                                 0xf0, 0x10, 0xf0, 0x10, 0xf0,
-                                 0x90, 0x90, 0xf0, 0x10, 0x10,
-                                 0xf0, 0x80, 0xf0, 0x10, 0xf0,
-                                 0xf0, 0x80, 0xf0, 0x90, 0xf0,
-                                 0xf0, 0x10, 0x20, 0x40, 0x40,
-                                 0xf0, 0x90, 0xf0, 0x90, 0xf0,
-                                 0xf0, 0x90, 0xf0, 0x10, 0xf0,
-                                 0xf0, 0x90, 0xf0, 0x90, 0x90,
-                                 0xe0, 0x90, 0xe0, 0x90, 0xe0,
-                                 0xf0, 0x80, 0x80, 0x80, 0xf0,
-                                 0xe0, 0x90, 0x90, 0x90, 0xe0,
-                                 0xf0, 0x80, 0xf0, 0x80, 0xf0,
-                                 0xf0, 0x80, 0xf0, 0x80, 0x80].iter().cloned());
-        memory.splice(0x200 .. (0x200 + rom.len()), rom);
-
         Cpu {
             gpr: [0; 16],
             program_counter: Cpu::PROGRAM_BASE,
             index: 0,
             stack_pointer: Cpu::STACK_BASE,
-            memory: memory,
+            memory: memory::Memory::new(&rom),
             display: [false; 64 * 32],
             rng: rand::thread_rng(),
             delay_timer: timer::Timer::new()
@@ -61,19 +41,19 @@ impl Cpu {
     }
 
     fn fetch_instruction(&mut self) -> Opcode {
-        let instruction = Opcode((&self.memory[(self.program_counter as usize)..]).read_u16::<BigEndian>().unwrap());
+        let instruction = Opcode(self.memory.read_u16_at(self.program_counter as usize));
         self.program_counter += Cpu::WORD_SIZE;
         instruction
     }
 
     fn push(&mut self, value: u16) {
         self.stack_pointer -= Cpu::WORD_SIZE;
-        (&mut self.memory[(self.stack_pointer as usize)..]).write_u16::<BigEndian>(value).unwrap();
+        self.memory.write_u16_at(value, self.stack_pointer as usize);
     }
 
     fn pop(&mut self) -> u16 {
         self.stack_pointer += Cpu::WORD_SIZE;
-        (&self.memory[(self.stack_pointer as usize)..]).read_u16::<BigEndian>().unwrap()
+        self.memory.read_u16_at(self.stack_pointer as usize)
     }
 
     fn call(&mut self, addr: u16) {
@@ -89,7 +69,7 @@ impl Cpu {
         assert!(z <= 15, "Sprite size is {} when the maximum allowed sprite size is 15", z);
 
         let mut sprite_data = vec![0u8; z as usize];
-        (&self.memory[(self.index as usize)..]).read_exact(sprite_data.as_mut_slice()).unwrap();
+        self.memory.read_at(sprite_data.as_mut_slice(), self.index as usize);
 
         let sprite = Sprite::new(&sprite_data);
         let screen_mask = sprite.get_screen_mask(x as usize, y as usize);
@@ -110,15 +90,15 @@ impl Cpu {
 
     fn bcd(&mut self, number: u8) {
         let bcd = [((number / 100) % 10) as u8, ((number / 10) % 10) as u8, (number % 10) as u8];
-        (&mut self.memory[(self.index as usize)..]).write_all(&bcd).unwrap();
+        self.memory.write_at(&bcd, self.index as usize);
     }
 
     fn load_regs(&mut self, reg_count: usize) {
-        (&self.memory[(self.index as usize)..]).read_exact(&mut self.gpr[0 .. reg_count+1]).unwrap();
+        self.memory.read_at(&mut self.gpr[0 .. reg_count+1], self.index as usize);
     }
 
     fn store_regs(&mut self, reg_count: usize) {
-        (&mut self.memory[(self.index as usize)..]).write_all(&self.gpr[0 .. reg_count+1]).unwrap();
+        self.memory.write_at(&self.gpr[0 .. reg_count+1], self.index as usize);
     }
 
     pub fn execute(&mut self) {
