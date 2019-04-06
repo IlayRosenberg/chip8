@@ -9,7 +9,11 @@ const FONTS_BASE: usize = 0;
 const FONT_SIZE: usize = 5; 
 const FONT_COUNT: usize = 16;
 
-const PROGRAM_CODE_BASE: usize = 0x200;
+pub const PROGRAM_CODE_BASE: usize = 0x200;
+
+pub const STACK_BASE: usize = 0xefe;
+
+pub const WORD_SIZE: usize = 2;
 
 const FONTS: [u8; FONT_SIZE * FONT_COUNT] = [
     0xf0, 0x90, 0x90, 0x90, 0xf0,   // 0

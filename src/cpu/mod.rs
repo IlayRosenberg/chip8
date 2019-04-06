@@ -14,9 +14,9 @@ mod timer;
 
 pub struct Cpu {
     gpr: [u8; 16],
-    program_counter: u16,
-    index: u16,
-    stack_pointer: u16,
+    program_counter: usize,
+    index: usize,
+    stack_pointer: usize,
     memory: memory::Memory,
     display: [bool; 64 * 32],
     rng: rand::rngs::ThreadRng,
@@ -24,15 +24,12 @@ pub struct Cpu {
 }
 
 impl Cpu {
-    const PROGRAM_BASE: u16 = 0x200;
-    const STACK_BASE: u16 = 0xefe;
-    const WORD_SIZE: u16 = std::mem::size_of::<u16>() as u16;
     pub fn new(rom: Vec<u8>) -> Cpu {
         Cpu {
             gpr: [0; 16],
-            program_counter: Cpu::PROGRAM_BASE,
+            program_counter: memory::PROGRAM_CODE_BASE,
             index: 0,
-            stack_pointer: Cpu::STACK_BASE,
+            stack_pointer: memory::STACK_BASE,
             memory: memory::Memory::new(&rom),
             display: [false; 64 * 32],
             rng: rand::thread_rng(),
@@ -41,35 +38,35 @@ impl Cpu {
     }
 
     fn fetch_instruction(&mut self) -> Opcode {
-        let instruction = Opcode(self.memory.read_u16_at(self.program_counter as usize));
-        self.program_counter += Cpu::WORD_SIZE;
+        let instruction = Opcode(self.memory.read_u16_at(self.program_counter));
+        self.program_counter += memory::WORD_SIZE;
         instruction
     }
 
     fn push(&mut self, value: u16) {
-        self.stack_pointer -= Cpu::WORD_SIZE;
-        self.memory.write_u16_at(value, self.stack_pointer as usize);
+        self.stack_pointer -= memory::WORD_SIZE;
+        self.memory.write_u16_at(value, self.stack_pointer);
     }
 
     fn pop(&mut self) -> u16 {
-        self.stack_pointer += Cpu::WORD_SIZE;
-        self.memory.read_u16_at(self.stack_pointer as usize)
+        self.stack_pointer += memory::WORD_SIZE;
+        self.memory.read_u16_at(self.stack_pointer)
     }
 
     fn call(&mut self, addr: u16) {
-        self.push(self.program_counter);
-        self.program_counter = addr;
+        self.push(self.program_counter as u16);
+        self.program_counter = addr as usize;
     }
 
     fn ret(&mut self) {
-        self.program_counter = self.pop();
+        self.program_counter = self.pop() as usize;
     }
 
     fn draw(&mut self, x: u8, y: u8, z: u8) {
         assert!(z <= 15, "Sprite size is {} when the maximum allowed sprite size is 15", z);
 
         let mut sprite_data = vec![0u8; z as usize];
-        self.memory.read_at(sprite_data.as_mut_slice(), self.index as usize);
+        self.memory.read_at(sprite_data.as_mut_slice(), self.index);
 
         let sprite = Sprite::new(&sprite_data);
         let screen_mask = sprite.get_screen_mask(x as usize, y as usize);
@@ -84,39 +81,39 @@ impl Cpu {
 
     fn skip_if(&mut self, predicate: bool) {
         if predicate {
-            self.program_counter += Cpu::WORD_SIZE;
+            self.program_counter += memory::WORD_SIZE;
         }
     }
 
     fn bcd(&mut self, number: u8) {
         let bcd = [((number / 100) % 10) as u8, ((number / 10) % 10) as u8, (number % 10) as u8];
-        self.memory.write_at(&bcd, self.index as usize);
+        self.memory.write_at(&bcd, self.index);
     }
 
     fn load_regs(&mut self, reg_count: usize) {
-        self.memory.read_at(&mut self.gpr[0 .. reg_count+1], self.index as usize);
+        self.memory.read_at(&mut self.gpr[0 .. reg_count+1], self.index);
     }
 
     fn store_regs(&mut self, reg_count: usize) {
-        self.memory.write_at(&self.gpr[0 .. reg_count+1], self.index as usize);
+        self.memory.write_at(&self.gpr[0 .. reg_count+1], self.index);
     }
 
     pub fn execute(&mut self) {
         let opcode = self.fetch_instruction();
 
         match opcode.to_nibble_tuple() {
-            opcode!("JMP addr")             => { self.program_counter = opcode.tribble(); },
-            opcode!("JMP V0, addr")         => { self.program_counter = opcode.tribble() + self.gpr[0] as u16; },
+            opcode!("JMP addr")             => { self.program_counter = opcode.tribble() as usize; },
+            opcode!("JMP V0, addr")         => { self.program_counter = (opcode.tribble() + self.gpr[0] as u16) as usize; },
             opcode!("CALL addr")            => { self.call(opcode.tribble()); }
             opcode!("RET")                  => { self.ret(); }
             opcode!("MOV Vx, byte")         => { self.gpr[opcode.reg1()] = opcode.byte(); },
             opcode!("MOV Vx, Vy")           => { self.gpr[opcode.reg1()] = self.gpr[opcode.reg2()]; },
-            opcode!("MOV I, addr")          => { self.index = opcode.tribble(); },
+            opcode!("MOV I, addr")          => { self.index = opcode.tribble() as usize; },
             opcode!("MOV DT, Vx")           => { self.delay_timer.set(self.gpr[opcode.reg1()] as u64); },
             opcode!("MOV Vx, DT")           => { self.gpr[opcode.reg1()] = self.delay_timer.get() as u8; },
             opcode!("ADD Vx, byte")         => { self.gpr[opcode.reg1()].wrapping_add(opcode.byte()); },
             opcode!("ADD Vx, Vy")           => { self.gpr[opcode.reg1()].wrapping_add(self.gpr[opcode.reg2()]); },
-            opcode!("ADD I, Vx")            => { self.index.wrapping_add(self.gpr[opcode.reg1()] as u16); },
+            opcode!("ADD I, Vx")            => { self.index.wrapping_add(self.gpr[opcode.reg1()] as usize); },
             opcode!("SUB Vx, Vy")           => { self.gpr[opcode.reg1()].wrapping_sub(self.gpr[opcode.reg2()]); },
             opcode!("RSUB Vx, Vy")          => { self.gpr[opcode.reg1()] = self.gpr[opcode.reg2()].wrapping_sub(self.gpr[opcode.reg1()]); },
             opcode!("OR Vx, Vy")            => { self.gpr[opcode.reg1()] |= self.gpr[opcode.reg2()]; },
@@ -138,7 +135,7 @@ impl Cpu {
             opcode!("BCD Vx")               => { self.bcd(self.gpr[opcode.reg1()]); },
             opcode!("LD Vx, [I]")           => { self.load_regs(opcode.reg1()) },
             opcode!("STR [I], Vx")          => { self.store_regs(opcode.reg1()) },
-            opcode!("FONT Vx")              => { self.index = (self.gpr[opcode.reg1()] * 5) as u16; }
+            opcode!("FONT Vx")              => { self.index = (self.gpr[opcode.reg1()] * 5) as usize; }
             _                               => { println!("Unsupported opcode: 0x{:X} at 0x{:X}", opcode.0, self.program_counter - 2); std::process::exit(1); }
         }
     }
