@@ -140,19 +140,19 @@ impl Cpu {
             }
 
             opcode!("ADD Vx, byte") => {
-                self.gpr[opcode.reg1()].wrapping_add(opcode.byte());
+                self.gpr[opcode.reg1()] = self.gpr[opcode.reg1()].wrapping_add(opcode.byte());
             }
 
             opcode!("ADD Vx, Vy") => {
-                self.gpr[opcode.reg1()].wrapping_add(self.gpr[opcode.reg2()]);
+                self.gpr[opcode.reg1()] = self.gpr[opcode.reg1()].wrapping_add(self.gpr[opcode.reg2()]);
             }
 
             opcode!("ADD I, Vx") => {
-                self.index.wrapping_add(self.gpr[opcode.reg1()] as usize);
+                self.index = self.index.wrapping_add(self.gpr[opcode.reg1()] as usize);
             }
 
             opcode!("SUB Vx, Vy") => {
-                self.gpr[opcode.reg1()].wrapping_sub(self.gpr[opcode.reg2()]);
+                self.gpr[opcode.reg1()] = self.gpr[opcode.reg1()].wrapping_sub(self.gpr[opcode.reg2()]);
             }
 
             opcode!("RSUB Vx, Vy") => {
@@ -203,7 +203,7 @@ impl Cpu {
             }
 
             opcode!("CLS") => {
-                self.display.clear()
+                self.display.clear();
             }
 
             opcode!("DRW Vx, Vy, nibble") => {
