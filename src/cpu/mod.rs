@@ -202,6 +202,10 @@ impl Cpu {
                 self.skip_if(self.gpr[opcode.reg1()] != self.gpr[opcode.reg2()])
             }
 
+            opcode!("CLS") => {
+                self.display.clear()
+            }
+
             opcode!("DRW Vx, Vy, nibble") => {
                 self.draw(
                     self.gpr[opcode.reg1()],
