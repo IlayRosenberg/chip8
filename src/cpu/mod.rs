@@ -49,8 +49,9 @@ impl Cpu {
     }
 
     fn pop(&mut self) -> u16 {
+        let value = self.memory.read_u16_at(self.stack_pointer);
         self.stack_pointer += memory::WORD_SIZE;
-        self.memory.read_u16_at(self.stack_pointer)
+        value
     }
 
     fn call(&mut self, addr: u16) {
