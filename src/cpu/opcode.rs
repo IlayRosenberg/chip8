@@ -67,7 +67,11 @@ impl Opcode {
     }
 
     pub fn to_nibble_tuple(&self) -> (u8, u8, u8, u8) {
-        (get_nibble(self.0, 3), get_nibble(self.0, 2), get_nibble(self.0, 1), get_nibble(self.0, 0))
+        (
+            get_nibble(self.0, 3),
+            get_nibble(self.0, 2),
+            get_nibble(self.0, 1),
+            get_nibble(self.0, 0),
+        )
     }
-
 }
