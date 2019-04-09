@@ -10,7 +10,8 @@ mod memory;
 mod display;
 use display::Sprite;
 
-mod timer;
+mod timers;
+use timers::{DelayTimer, SoundTimer};
 
 pub struct Cpu {
     gpr: [u8; 16],
@@ -20,7 +21,8 @@ pub struct Cpu {
     memory: memory::Memory,
     display: display::Display,
     rng: rand::rngs::ThreadRng,
-    delay_timer: timer::Timer,
+    delay_timer: DelayTimer,
+    sound_timer: SoundTimer
 }
 
 impl Cpu {
@@ -33,7 +35,8 @@ impl Cpu {
             memory: memory::Memory::new(&rom),
             display: display::Display::new(),
             rng: rand::thread_rng(),
-            delay_timer: timer::Timer::new(),
+            delay_timer: DelayTimer::new(),
+            sound_timer: SoundTimer::new()
         }
     }
 
@@ -137,6 +140,10 @@ impl Cpu {
 
             opcode!("MOV Vx, DT") => {
                 self.gpr[opcode.reg1()] = self.delay_timer.get() as u8;
+            }
+
+            opcode!("MOV ST, Vx") => {
+                self.sound_timer.set(self.gpr[opcode.reg1()] as u64);
             }
 
             opcode!("ADD Vx, byte") => {
