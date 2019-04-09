@@ -17,7 +17,7 @@ impl Display {
     pub fn draw(&mut self, sprite: &Sprite, x: usize, y: usize) -> bool {
         let mut collision: bool = false;
 
-        for line in y..y + self.0.len() {
+        for line in y..y + sprite.0.len() {
             for column in x..x + 8 {
                 let old_pixel_value = self.0[line][column % 64];
                 let pixel = sprite.0[line - y][column - x];
