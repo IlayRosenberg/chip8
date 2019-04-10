@@ -1,21 +1,31 @@
-use std::time::{Duration, Instant};
 use rodio::source::{self, Source};
+use std::time::{Duration, Instant};
 
 pub struct SoundTimer {
-    sink: rodio::Sink
+    output_device: rodio::Device,
+    current_sound: Option<rodio::Sink>,
 }
 
 impl SoundTimer {
     pub fn new() -> SoundTimer {
         SoundTimer {
-            sink: rodio::Sink::new(&rodio::default_output_device().unwrap())
+            output_device: rodio::default_output_device().unwrap(),
+            current_sound: None
         }
     }
 
     pub fn set(&mut self, time: u64) {
-        self.sink.stop();
-        self.sink.append(source::SineWave::new(280).amplify(0.25).take_duration(Duration::from_millis(hz_to_millis(time))));
-        self.sink.play();
+        let source = source::SineWave::new(280u32)
+                .amplify(0.25)
+                .repeat_infinite()
+                .take_duration(Duration::from_millis(hz_to_millis(time as f64) as u64));
+
+        let sink = self.current_sound.get_or_insert(rodio::Sink::new(&self.output_device));
+        if !sink.empty() {
+            *sink = rodio::Sink::new(&self.output_device);
+        }
+        sink.append(source);
+        sink.play();
     }
 }
 
@@ -33,7 +43,7 @@ impl DelayTimer {
     }
 
     pub fn set(&mut self, time: u64) {
-        self.duration = Duration::from_millis(hz_to_millis(time));
+        self.duration = Duration::from_millis(hz_to_millis(time as f64) as u64);
         self.initial = Instant::now();
     }
 
@@ -42,17 +52,17 @@ impl DelayTimer {
             .duration
             .checked_sub(Instant::now().duration_since(self.initial))
         {
-            millis_to_hz(elapsed_time.as_millis() as u64)
+            millis_to_hz(elapsed_time.as_micros() as f64) as u64
         } else {
             0
         }
     }
 }
 
-fn hz_to_millis(hz: u64) -> u64 {
-    hz * 60 / 1000
+fn hz_to_millis(hz: f64) -> f64 {
+    hz / 60.0 * 1000.0
 }
 
-fn millis_to_hz(hz: u64) -> u64 {
-    hz * 1000 / 60
+fn millis_to_hz(hz: f64) -> f64 {
+    hz / 1000.0 * 60.0
 }
