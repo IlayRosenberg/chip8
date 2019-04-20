@@ -22,10 +22,10 @@ impl Display {
 
         for line in y..y + sprite.len() {
             for column in x..x + 8 {
-                let old_pixel_value = self.0[line][column % 64];
+                let old_pixel_value = self.0[line % DISPLAY_HEIGHT][column % DISPLAY_WIDTH];
                 let pixel = sprite[line - y][column - x];
 
-                self.0[line][column % 64] ^= pixel;
+                self.0[line % DISPLAY_HEIGHT][column % DISPLAY_WIDTH] ^= pixel;
 
                 if old_pixel_value && pixel {
                     collision = true;
