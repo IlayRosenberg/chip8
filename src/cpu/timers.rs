@@ -10,17 +10,19 @@ impl SoundTimer {
     pub fn new() -> SoundTimer {
         SoundTimer {
             output_device: rodio::default_output_device().unwrap(),
-            current_sound: None
+            current_sound: None,
         }
     }
 
     pub fn set(&mut self, time: u64) {
         let source = source::SineWave::new(280u32)
-                .amplify(0.25)
-                .repeat_infinite()
-                .take_duration(Duration::from_millis(hz_to_millis(time as f64) as u64));
+            .amplify(0.25)
+            .repeat_infinite()
+            .take_duration(Duration::from_millis(hz_to_millis(time as f64) as u64));
 
-        let sink = self.current_sound.get_or_insert(rodio::Sink::new(&self.output_device));
+        let sink = self
+            .current_sound
+            .get_or_insert(rodio::Sink::new(&self.output_device));
         if !sink.empty() {
             *sink = rodio::Sink::new(&self.output_device);
         }

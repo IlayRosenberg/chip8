@@ -8,7 +8,6 @@ use opcode::Opcode;
 mod memory;
 
 mod display;
-use display::Sprite;
 
 mod timers;
 use timers::{DelayTimer, SoundTimer};
@@ -22,7 +21,7 @@ pub struct Cpu {
     display: display::Display,
     rng: rand::rngs::ThreadRng,
     delay_timer: DelayTimer,
-    sound_timer: SoundTimer
+    sound_timer: SoundTimer,
 }
 
 impl Cpu {
@@ -36,7 +35,7 @@ impl Cpu {
             display: display::Display::new(),
             rng: rand::thread_rng(),
             delay_timer: DelayTimer::new(),
-            sound_timer: SoundTimer::new()
+            sound_timer: SoundTimer::new(),
         }
     }
 
@@ -73,8 +72,11 @@ impl Cpu {
             z
         );
 
-        let sprite = Sprite::new(&self.memory.0[self.index..self.index + z as usize]);
-        self.gpr[0xf] = self.display.draw(&sprite, x as usize, y as usize) as u8;
+        self.gpr[0xf] = self.display.draw(
+            x as usize,
+            y as usize,
+            &self.memory.0[self.index..self.index + z as usize],
+        ) as u8;
     }
 
     fn skip_if(&mut self, predicate: bool) {
@@ -151,7 +153,8 @@ impl Cpu {
             }
 
             opcode!("ADD Vx, Vy") => {
-                self.gpr[opcode.reg1()] = self.gpr[opcode.reg1()].wrapping_add(self.gpr[opcode.reg2()]);
+                self.gpr[opcode.reg1()] =
+                    self.gpr[opcode.reg1()].wrapping_add(self.gpr[opcode.reg2()]);
             }
 
             opcode!("ADD I, Vx") => {
@@ -159,7 +162,8 @@ impl Cpu {
             }
 
             opcode!("SUB Vx, Vy") => {
-                self.gpr[opcode.reg1()] = self.gpr[opcode.reg1()].wrapping_sub(self.gpr[opcode.reg2()]);
+                self.gpr[opcode.reg1()] =
+                    self.gpr[opcode.reg1()].wrapping_sub(self.gpr[opcode.reg2()]);
             }
 
             opcode!("RSUB Vx, Vy") => {
