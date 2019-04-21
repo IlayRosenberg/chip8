@@ -202,7 +202,7 @@ impl Cpu {
             }
 
             opcode!("SKE Vx, Vy") => {
-                self.skip_if(self.gpr[opcode.reg1()] == self.gpr[opcode.reg2()])
+                self.skip_if(self.gpr[opcode.reg1()] == self.gpr[opcode.reg2()]);
             }
 
             opcode!("SKNE Vx, byte") => {
@@ -210,7 +210,15 @@ impl Cpu {
             }
 
             opcode!("SKNE Vx, Vy") => {
-                self.skip_if(self.gpr[opcode.reg1()] != self.gpr[opcode.reg2()])
+                self.skip_if(self.gpr[opcode.reg1()] != self.gpr[opcode.reg2()]);
+            }
+
+            opcode!("SKP Vx") => {
+                self.skip_if(false);
+            }
+
+            opcode!("SKNP Vx") => {
+                self.skip_if(true);
             }
 
             opcode!("CLS") => {
