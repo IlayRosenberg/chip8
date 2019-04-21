@@ -1,5 +1,6 @@
 use std::env;
 use std::io;
+use std::thread;
 
 pub mod cpu;
 
@@ -11,8 +12,13 @@ fn main() -> io::Result<()> {
     }
 
     let rom_contents = std::fs::read(&args[1])?;
-    let mut cpu = cpu::Cpu::new(rom_contents);
-    loop {
-        cpu.execute()
-    }
+
+    thread::spawn(move || {
+        let mut cpu = cpu::Cpu::new(rom_contents);
+        loop {
+            cpu.execute()
+        }
+    });
+    loop {}
+    Ok(())
 }
