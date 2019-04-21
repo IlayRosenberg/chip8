@@ -194,7 +194,7 @@ impl Cpu {
             }
 
             opcode!("RND Vx, tribble") => {
-                self.gpr[opcode.reg1()] = self.rng.gen_range(0, opcode.byte() + 1);
+                self.gpr[opcode.reg1()] = self.rng.gen_range(0, opcode.byte() as u16 + 1) as u8;
             }
 
             opcode!("SKE Vx, byte") => {
