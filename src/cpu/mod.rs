@@ -218,11 +218,11 @@ impl<T: UI> Cpu<T> {
             }
 
             opcode!("SKP Vx") => {
-                self.skip_if(false);
+                self.skip_if(self.ui.is_key_pressed(self.gpr[opcode.reg1()] as usize));
             }
 
             opcode!("SKNP Vx") => {
-                self.skip_if(true);
+                self.skip_if(!self.ui.is_key_pressed(self.gpr[opcode.reg1()] as usize));
             }
 
             opcode!("CLS") => {

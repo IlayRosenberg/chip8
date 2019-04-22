@@ -24,6 +24,10 @@ impl PistonUI {
     pub fn get_display(&self) -> MutexGuard<Screen> {
         self.display.lock().unwrap()
     }
+
+    pub fn set_key_pressed(&mut self, key_code: usize, value: bool) {
+        self.keypad.lock().unwrap()[key_code] = value;
+    }
 }
 
 impl UI for PistonUI {
