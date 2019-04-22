@@ -1,40 +1,30 @@
+use super::user_interface::{DISPLAY_HEIGHT, DISPLAY_WIDTH, UI};
 use bitvec::{BigEndian, BitVec, Bits};
-
-const DISPLAY_HEIGHT: usize = 32;
-const DISPLAY_WIDTH: usize = 64;
 
 type Sprite = Vec<BitVec>;
 
-pub struct Display([[bool; DISPLAY_WIDTH]; DISPLAY_HEIGHT]);
+pub fn draw_sprite(ui: &mut UI, x: usize, y: usize, sprite_data: &[u8]) -> bool {
+    let mut collision: bool = false;
+    let sprite = generate_sprite(sprite_data);
 
-impl Display {
-    pub fn new() -> Display {
-        Display([[false; DISPLAY_WIDTH]; DISPLAY_HEIGHT])
-    }
+    for line in y..y + sprite.len() {
+        for column in x..x + 8 {
+            let old_pixel_value = ui.read_pixel(line % DISPLAY_HEIGHT, column % DISPLAY_WIDTH);
+            let pixel = sprite[line - y][column - x];
 
-    pub fn clear(&mut self) {
-        self.0 = [[false; DISPLAY_WIDTH]; DISPLAY_HEIGHT];
-    }
+            ui.write_pixel(
+                line % DISPLAY_HEIGHT,
+                column % DISPLAY_WIDTH,
+                old_pixel_value ^ pixel,
+            );
 
-    pub fn draw(&mut self, x: usize, y: usize, sprite_data: &[u8]) -> bool {
-        let mut collision: bool = false;
-        let sprite = generate_sprite(sprite_data);
-
-        for line in y..y + sprite.len() {
-            for column in x..x + 8 {
-                let old_pixel_value = self.0[line % DISPLAY_HEIGHT][column % DISPLAY_WIDTH];
-                let pixel = sprite[line - y][column - x];
-
-                self.0[line % DISPLAY_HEIGHT][column % DISPLAY_WIDTH] ^= pixel;
-
-                if old_pixel_value && pixel {
-                    collision = true;
-                }
+            if old_pixel_value && pixel {
+                collision = true;
             }
         }
-
-        collision
     }
+
+    collision
 }
 
 fn generate_sprite(sprite_data: &[u8]) -> Sprite {

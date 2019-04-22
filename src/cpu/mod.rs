@@ -12,27 +12,30 @@ mod display;
 mod timers;
 use timers::{DelayTimer, SoundTimer};
 
-pub struct Cpu {
+pub mod user_interface;
+use user_interface::UI;
+
+pub struct Cpu<T: UI> {
     gpr: [u8; 16],
     program_counter: usize,
     index: usize,
     stack_pointer: usize,
     memory: memory::Memory,
-    display: display::Display,
+    ui: T,
     rng: rand::rngs::ThreadRng,
     delay_timer: DelayTimer,
     sound_timer: SoundTimer,
 }
 
-impl Cpu {
-    pub fn new(rom: Vec<u8>) -> Cpu {
+impl<T: UI> Cpu<T> {
+    pub fn new(rom: Vec<u8>, ui: T) -> Cpu<T> {
         Cpu {
             gpr: [0; 16],
             program_counter: memory::PROGRAM_CODE_BASE,
             index: 0,
             stack_pointer: memory::STACK_BASE,
             memory: memory::Memory::new(&rom),
-            display: display::Display::new(),
+            ui: ui,
             rng: rand::thread_rng(),
             delay_timer: DelayTimer::new(),
             sound_timer: SoundTimer::new(),
@@ -72,7 +75,8 @@ impl Cpu {
             z
         );
 
-        self.gpr[0xf] = self.display.draw(
+        self.gpr[0xf] = display::draw_sprite(
+            &mut self.ui,
             x as usize,
             y as usize,
             &self.memory.0[self.index..self.index + z as usize],
@@ -222,7 +226,7 @@ impl Cpu {
             }
 
             opcode!("CLS") => {
-                self.display.clear();
+                self.ui.clear_display();
             }
 
             opcode!("DRW Vx, Vy, nibble") => {
