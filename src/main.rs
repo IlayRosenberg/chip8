@@ -7,7 +7,7 @@ use std::sync::Mutex;
 use std::thread;
 
 mod cpu;
-use cpu::user_interface::{PistonUI, DISPLAY_HEIGHT, DISPLAY_WIDTH, UI};
+use cpu::user_interface::{PistonUI, DISPLAY_HEIGHT, DISPLAY_WIDTH};
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
