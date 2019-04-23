@@ -157,8 +157,16 @@ impl<T: UI> Cpu<T> {
             }
 
             opcode!("ADD Vx, Vy") => {
-                self.gpr[opcode.reg1()] =
-                    self.gpr[opcode.reg1()].wrapping_add(self.gpr[opcode.reg2()]);
+                self.gpr[opcode.reg1()] = match self.gpr[opcode.reg1()].checked_add(self.gpr[opcode.reg2()]) {
+                    Some(value) => { 
+                        self.gpr[0xf] = 0;
+                        value
+            }
+                    None => {
+                        self.gpr[0xf] = 1;
+                        self.gpr[opcode.reg1()].wrapping_add(self.gpr[opcode.reg2()])
+                    }
+                }
             }
 
             opcode!("ADD I, Vx") => {
@@ -166,13 +174,30 @@ impl<T: UI> Cpu<T> {
             }
 
             opcode!("SUB Vx, Vy") => {
-                self.gpr[opcode.reg1()] =
-                    self.gpr[opcode.reg1()].wrapping_sub(self.gpr[opcode.reg2()]);
+                self.gpr[opcode.reg1()] = match self.gpr[opcode.reg1()].checked_sub(self.gpr[opcode.reg2()]) {
+                    Some(value) => { 
+                        self.gpr[0xf] = 1;
+                        value
+                    }
+                    None => {
+                        self.gpr[0xf] = 0;
+                        self.gpr[opcode.reg1()].wrapping_sub(self.gpr[opcode.reg2()])
+                    }
+                }
             }
 
             opcode!("RSUB Vx, Vy") => {
-                self.gpr[opcode.reg1()] =
-                    self.gpr[opcode.reg2()].wrapping_sub(self.gpr[opcode.reg1()]);
+                self.gpr[opcode.reg1()] = match self.gpr[opcode.reg2()].checked_sub(self.gpr[opcode.reg1()]) {
+                    Some(value) => { 
+                        self.gpr[0xf] = 1;
+                        value
+                    }
+                    None => {
+                        self.gpr[0xf] = 0;
+                        self.gpr[opcode.reg2()].wrapping_sub(self.gpr[opcode.reg1()])
+                    }
+                }
+                    
             }
 
             opcode!("OR Vx, Vy") => {
@@ -188,12 +213,12 @@ impl<T: UI> Cpu<T> {
             }
 
             opcode!("SHR Vx") => {
-                self.gpr[opcode.reg1()].get::<bitvec::BigEndian>(0.into());
+                self.gpr[0xf] = self.gpr[opcode.reg1()].get::<bitvec::LittleEndian>(0.into()) as u8;
                 self.gpr[opcode.reg1()] >>= 1;
             }
 
             opcode!("SHL Vx") => {
-                self.gpr[opcode.reg1()].get::<bitvec::BigEndian>(7.into());
+                self.gpr[0xf] = self.gpr[opcode.reg1()].get::<bitvec::LittleEndian>(7.into()) as u8;
                 self.gpr[opcode.reg1()] <<= 1;
             }
 
