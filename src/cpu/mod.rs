@@ -152,6 +152,18 @@ impl<T: UI> Cpu<T> {
                 self.sound_timer.set(self.gpr[opcode.reg1()] as u64);
             }
 
+            opcode!("MOV Vx, K") => {
+                'outer: loop {
+                    for key_code in 0..16 {
+                        if self.ui.is_key_pressed(key_code) {
+                            self.gpr[opcode.reg1()] = key_code as u8;
+                            break 'outer;
+                        }
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(5));
+                }
+            }
+
             opcode!("ADD Vx, byte") => {
                 self.gpr[opcode.reg1()] = self.gpr[opcode.reg1()].wrapping_add(opcode.byte());
             }
