@@ -152,8 +152,7 @@ impl<T: UI> Cpu<T> {
                 self.sound_timer.set(self.gpr[opcode.reg1()] as u64);
             }
 
-            opcode!("MOV Vx, K") => {
-                'outer: loop {
+            opcode!("MOV Vx, K") => 'outer: loop {
                     for key_code in 0..16 {
                         if self.ui.is_key_pressed(key_code) {
                             self.gpr[opcode.reg1()] = key_code as u8;
@@ -161,15 +160,15 @@ impl<T: UI> Cpu<T> {
                         }
                     }
                     std::thread::sleep(std::time::Duration::from_millis(5));
-                }
-            }
+            },
 
             opcode!("ADD Vx, byte") => {
                 self.gpr[opcode.reg1()] = self.gpr[opcode.reg1()].wrapping_add(opcode.byte());
             }
 
             opcode!("ADD Vx, Vy") => {
-                self.gpr[opcode.reg1()] = match self.gpr[opcode.reg1()].checked_add(self.gpr[opcode.reg2()]) {
+                self.gpr[opcode.reg1()] =
+                    match self.gpr[opcode.reg1()].checked_add(self.gpr[opcode.reg2()]) {
                     Some(value) => { 
                         self.gpr[0xf] = 0;
                         value
@@ -186,7 +185,8 @@ impl<T: UI> Cpu<T> {
             }
 
             opcode!("SUB Vx, Vy") => {
-                self.gpr[opcode.reg1()] = match self.gpr[opcode.reg1()].checked_sub(self.gpr[opcode.reg2()]) {
+                self.gpr[opcode.reg1()] =
+                    match self.gpr[opcode.reg1()].checked_sub(self.gpr[opcode.reg2()]) {
                     Some(value) => { 
                         self.gpr[0xf] = 1;
                         value
@@ -199,7 +199,8 @@ impl<T: UI> Cpu<T> {
             }
 
             opcode!("RSUB Vx, Vy") => {
-                self.gpr[opcode.reg1()] = match self.gpr[opcode.reg2()].checked_sub(self.gpr[opcode.reg1()]) {
+                self.gpr[opcode.reg1()] =
+                    match self.gpr[opcode.reg2()].checked_sub(self.gpr[opcode.reg1()]) {
                     Some(value) => { 
                         self.gpr[0xf] = 1;
                         value
@@ -209,7 +210,6 @@ impl<T: UI> Cpu<T> {
                         self.gpr[opcode.reg2()].wrapping_sub(self.gpr[opcode.reg1()])
                     }
                 }
-                    
             }
 
             opcode!("OR Vx, Vy") => {
